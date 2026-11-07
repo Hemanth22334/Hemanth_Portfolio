@@ -18,7 +18,6 @@ function applyTheme(theme) {
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('portfolio-theme'); } catch { /* Storage may be unavailable. */ }
 applyTheme(savedTheme === 'dark' ? 'dark' : 'light');
-
 themeToggle.addEventListener('click', () => {
   const nextTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
   applyTheme(nextTheme);
@@ -30,7 +29,6 @@ function closeMenu() {
   menuToggle.setAttribute('aria-label', 'Open navigation');
   navLinks.classList.remove('is-open');
 }
-
 menuToggle.addEventListener('click', () => {
   const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
   menuToggle.setAttribute('aria-expanded', String(!isOpen));
@@ -42,15 +40,11 @@ document.addEventListener('keydown', (event) => { if (event.key === 'Escape') cl
 document.addEventListener('click', (event) => {
   if (!navLinks.contains(event.target) && !menuToggle.contains(event.target)) closeMenu();
 });
-
 const year = document.querySelector('#year');
 if (year) year.textContent = new Date().getFullYear();
 
-const revealTargets = document.querySelectorAll('.section-heading, .about-copy, .skill-card, .project-card, .timeline-item, .extra-card');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-// GSAP + ScrollTrigger add refined motion as progressive enhancement. If the
-// CDN is unavailable, the page still animates with the native observer below.
+const revealTargets = document.querySelectorAll('.section-heading, .about-copy, .skill-card, .project-card, .timeline-item, .extra-card');
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -68,40 +62,36 @@ async function enhanceMotion() {
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js');
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js');
     if (!window.gsap || !window.ScrollTrigger) return false;
-
     const { gsap, ScrollTrigger } = window;
     gsap.registerPlugin(ScrollTrigger);
-    gsap.from('.hero-copy > *', {
-      y: 22,
-      opacity: 0,
-      duration: 0.75,
-      stagger: 0.09,
-      ease: 'power2.out',
-      clearProps: 'all',
-      delay: 0.12
+    gsap.from('.hero-copy > *', { y: 22, opacity: 0, duration: .75, stagger: .09, ease: 'power2.out', clearProps: 'all', delay: .12 });
+    gsap.from('.hero-art > *', { y: 12, opacity: 0, duration: .8, stagger: .08, ease: 'power2.out', clearProps: 'all', delay: .35 });
+    gsap.utils.toArray('.section-heading, .about-copy').forEach((element) => {
+      gsap.from(element, { y: 30, opacity: 0, duration: .7, ease: 'power2.out', clearProps: 'all', scrollTrigger: { trigger: element, start: 'top 88%', once: true } });
     });
-    gsap.from('.hero-art > *', {
-      y: 12,
-      opacity: 0,
-      duration: 0.8,
-      stagger: 0.08,
-      ease: 'power2.out',
-      clearProps: 'all',
-      delay: 0.35
+    gsap.utils.toArray('.skill-card').forEach((element, index) => {
+      gsap.from(element, { y: 28, opacity: 0, duration: .6, delay: (index % 2) * .1, ease: 'power2.out', clearProps: 'all', scrollTrigger: { trigger: element, start: 'top 92%', once: true } });
     });
-    revealTargets.forEach((element) => {
-      gsap.from(element, {
-        y: 22,
-        opacity: 0,
-        duration: 0.65,
-        ease: 'power2.out',
-        clearProps: 'all',
-        scrollTrigger: { trigger: element, start: 'top 88%', once: true }
+    gsap.utils.toArray('.project-card').forEach((element, index) => {
+      gsap.from(element, { y: 42, rotateX: 3, opacity: 0, duration: .75, delay: (index % 2) * .12, ease: 'power3.out', clearProps: 'all', scrollTrigger: { trigger: element, start: 'top 88%', once: true } });
+    });
+    gsap.utils.toArray('.timeline-item, .extra-card').forEach((element) => {
+      gsap.from(element, { x: 22, opacity: 0, duration: .65, ease: 'power2.out', clearProps: 'all', scrollTrigger: { trigger: element, start: 'top 90%', once: true } });
+    });
+    gsap.to('.hero-art', { yPercent: 9, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: .6 } });
+    gsap.utils.toArray('.project-card').forEach((card) => {
+      card.addEventListener('pointermove', (event) => {
+        if (window.matchMedia('(hover: none)').matches) return;
+        const bounds = card.getBoundingClientRect();
+        const x = (event.clientX - bounds.left) / bounds.width - .5;
+        const y = (event.clientY - bounds.top) / bounds.height - .5;
+        gsap.to(card, { rotateY: x * 3, rotateX: y * -3, transformPerspective: 900, duration: .35, ease: 'power2.out' });
       });
+      card.addEventListener('pointerleave', () => gsap.to(card, { rotateX: 0, rotateY: 0, duration: .45, ease: 'power2.out' }));
     });
     return true;
   } catch (error) {
-    // Keep the site fully usable when an external animation library is blocked.
+    // Use native IntersectionObserver if external animation assets are unavailable.
     return false;
   }
 }
@@ -116,10 +106,7 @@ function useNativeReveal() {
         currentObserver.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.12 });
+  }, { threshold: .12 });
   revealTargets.forEach((element) => observer.observe(element));
 }
-
-enhanceMotion().then((gsapLoaded) => {
-  if (!gsapLoaded) useNativeReveal();
-});
+enhanceMotion().then((gsapLoaded) => { if (!gsapLoaded) useNativeReveal(); });
